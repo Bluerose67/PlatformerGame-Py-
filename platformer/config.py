@@ -8,6 +8,8 @@ GRAVITY = 0.8
 TILE_SIZE = 128
 ANIMATION_DELAY = 3
 SCALE_FACTOR = 0.5  # Adjust this to control zoom (0.5 = 50% size)
+# Add these background-specific settings
+BG_SCALE_FACTOR = 0.7  # Adjust this to control background zoom
 SCALED_TILE = int(TILE_SIZE * SCALE_FACTOR)
 # Calculate level dimensions based on CSV
 LEVEL_WIDTH = 30 * TILE_SIZE  # 30 columns in CSV
@@ -20,7 +22,7 @@ LEVELS_DIR = os.path.join("levels")
 # Background Settings
 BG_LAYERS = [
     {"path": "blue_grass.png", "speed": 0.2},
-    {"path": "colored_grass.png", "speed": 0.5}
+    
 ]
 
 # Tile Properties

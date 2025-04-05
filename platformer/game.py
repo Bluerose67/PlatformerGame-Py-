@@ -88,7 +88,6 @@ class Game:
     
     def draw(self):
         self.screen.fill((0, 0, 0))
-
         self.background.draw(self.screen, self.camera_offset)
 
         for tile in self.tiles:

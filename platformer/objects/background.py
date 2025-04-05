@@ -1,44 +1,46 @@
 import pygame
 import os
-from config import WIDTH, HEIGHT, BG_LAYERS, SCALE_FACTOR
+from config import WIDTH, HEIGHT, BG_SCALE_FACTOR
 
 class Background:
     def __init__(self):
         self.layers = []
-        self.bg_width = 0
-        self.bg_height = 0
+        path = os.path.join("assets", "background", "blue_grass.png")
+        image = pygame.image.load(path).convert_alpha()
         
-        for layer in BG_LAYERS:
-            path = os.path.join("assets", "background", layer["path"])
-            image = pygame.image.load(path).convert_alpha()
-            scaled_image = pygame.transform.scale(image, 
-                (int(image.get_width() * SCALE_FACTOR), 
-                 int(image.get_height() * SCALE_FACTOR)))
-            self.layers.append({
-                "image": scaled_image,
-                "speed": layer["speed"],
-                "pos": [0, 0]
-            })
-            
-        # Calculate repeating needs
-        self.bg_width = self.layers[0]["image"].get_width()
-        self.bg_height = self.layers[0]["image"].get_height()
-        self.tiles_x = WIDTH // self.bg_width + 2
-        self.tiles_y = HEIGHT // self.bg_height + 2
+        # Scale to match game's visual比例
+        scaled_width = int(image.get_width() * BG_SCALE_FACTOR)
+        scaled_height = int(image.get_height() * BG_SCALE_FACTOR)
+        scaled_image = pygame.transform.smoothscale(image, (scaled_width, scaled_height))
+        
+        self.layers.append({
+            "image": scaled_image,
+            "speed": 0.2,  # Parallax scroll speed
+            "size": (scaled_width, scaled_height)
+        })
 
-    def draw(self, surface, offset):
+    def draw(self, surface, camera_offset):
+        screen_rect = pygame.Rect(0, 0, WIDTH, HEIGHT)
+        
         for layer in self.layers:
+            img = layer["image"]
+            img_w, img_h = layer["size"]
+            speed = layer["speed"]
+            
             # Calculate parallax offset
-            parallax_offset_x = offset[0] * layer["speed"]
-            parallax_offset_y = offset[1] * layer["speed"]
+            offset_x = -camera_offset[0] * speed
+            offset_y = -camera_offset[1] * speed
             
-            # Calculate starting positions
-            start_x = -(parallax_offset_x % self.bg_width)
-            start_y = -(parallax_offset_y % self.bg_height)
+            # Calculate tiling needs
+            tiles_x = (WIDTH // img_w) + 2
+            tiles_y = (HEIGHT // img_h) + 2
             
-            # Draw tiled background
-            for x in range(self.tiles_x):
-                for y in range(self.tiles_y):
-                    pos = (start_x + x * self.bg_width,
-                           start_y + y * self.bg_height)
-                    surface.blit(layer["image"], pos)
+            # Draw repeating background
+            for x in range(tiles_x):
+                for y in range(tiles_y):
+                    pos = (
+                        offset_x + (x * img_w),
+                        offset_y + (y * img_h)
+                    )
+                    if screen_rect.colliderect(pygame.Rect(pos, (img_w, img_h))):
+                        surface.blit(img, pos)
