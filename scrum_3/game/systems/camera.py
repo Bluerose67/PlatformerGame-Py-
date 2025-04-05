@@ -14,12 +14,14 @@ class Camera:
         )
 
     def update(self, target):
-        target_center = target.rect.center
-        camera_center = self.offset + pygame.Vector2(Config.WIDTH//2, Config.HEIGHT//2)
+
+        if target is None:  
+            return
         
-        if not self.deadzone.collidepoint(target_center):
-            offset = pygame.Vector2(target_center) - camera_center
-            self.offset += offset * 0.05
+        # Smooth camera follow logic
+        target_x = -target.rect.centerx + Config.WIDTH/2
+        target_y = -target.rect.centery + Config.HEIGHT/2
         
-        self.offset.x = max(min(0, self.offset.x), Config.WIDTH - self.level_width)
-        self.offset.y = max(min(0, self.offset.y), Config.HEIGHT - self.level_height)
+        # Apply smoothing
+        self.offset.x += (target_x - self.offset.x) * 0.1
+        self.offset.y += (target_y - self.offset.y) * 0.1

@@ -46,5 +46,7 @@ class Config:
         14: "14.png",
         15: "15.png",
         16: "16.png",  
-        17: "17.png"  
+        17: "17.png",  
+        99: None,  # Player spawn marker
+        100: None  # Enemy spawn marker
     }
