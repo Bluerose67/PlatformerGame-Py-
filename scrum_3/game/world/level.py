@@ -1,31 +1,32 @@
-import os 
+import csv
 import pygame
-from game.world.tile import Tile
-from game.entities.player import Player
-from game.entities.enemy import Enemy
+import os
 from config import Config
-
+from .tile import Tile
+from ..entities.player import Player
+from ..entities.enemy import Enemy
 
 class Level:
-    def __init__(self, filename):
+    def __init__(self, csv_file):
         self.tiles = pygame.sprite.Group()
         self.entities = pygame.sprite.Group()
-        self._load_level(filename)
-        self.width = len(self.level_data[0]) * Config.TILE_SIZE
-        self.height = len(self.level_data) * Config.TILE_SIZE
+        self.level_data = []
+        self.width = 0
+        self.height = 0
+        self._load_csv_level(csv_file)
 
-    def _load_level(self, filename):
+    def _load_csv_level(self, filename):
         filepath = os.path.join(Config.LEVELS_PATH, filename)
-        with open(filepath) as f:
-            self.level_data = [line.strip() for line in f]
         
-        for y, row in enumerate(self.level_data):
-            for x, cell in enumerate(row):
-                pos = (x * Config.TILE_SIZE, y * Config.TILE_SIZE)
-                if cell == 'X':
-                    self.tiles.add(Tile(pos))
-                elif cell == 'P':
-                    self.player = Player(pos)
-                    self.entities.add(self.player)
-                elif cell == 'E':
-                    self.entities.add(Enemy(pos))
+        with open(filepath, 'r') as file:
+            csv_reader = csv.reader(file)
+            self.level_data = [list(map(int, row)) for row in csv_reader]
+            
+            # Calculate dimensions
+            if self.level_data:
+                self.width = len(self.level_data[0]) * Config.TILE_SIZE
+                self.height = len(self.level_data) * Config.TILE_SIZE
+
+            for y, row in enumerate(self.level_data):
+                for x, tile_id in enumerate(row):
+                    self._process_tile(x, y, tile_id)

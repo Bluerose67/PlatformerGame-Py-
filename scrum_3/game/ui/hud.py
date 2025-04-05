@@ -8,7 +8,10 @@ class HUD:
         self.font = pygame.font.Font(
             os.path.join(Config.ASSETS_PATH, "fonts", "pixel_font.ttf"), 24
         )
-        self.heart_img = Config.load_image("ui/heart.png")
+        self.heart_img = pygame.transform.scale(
+            Config.load_image("ui/heart.png"), 
+            (128, 128)
+        )
         
     def draw(self, screen):
         self._draw_health(screen)

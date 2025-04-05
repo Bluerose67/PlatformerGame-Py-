@@ -7,10 +7,10 @@ class Camera:
         self.level_width = level_width
         self.level_height = level_height
         self.deadzone = pygame.Rect(
-            Config.WIDTH//2 - 150,
-            Config.HEIGHT//2 - 100,
-            300,
-            200
+            Config.WIDTH//2 - 300,
+            Config.HEIGHT//2 - 200,
+            600,
+            400
         )
 
     def update(self, target):

@@ -13,7 +13,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.running = True
         
-        self.level = Level("level_01.lvl")
+        self.level = Level("level_02.csv")
         self.camera = Camera(
             self.level.width, 
             self.level.height
