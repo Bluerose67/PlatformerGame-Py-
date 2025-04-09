@@ -27,6 +27,7 @@ LEVELS_DIR = os.path.join("levels")
 # Tile Properties
 SOLID_TILES = {0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 16}
 DANGER_TILES = {7}
+GOAL_TILE = {20}
 
 # Calculate level dimensions based on CSV
 LEVEL_WIDTH = 30 * TILE_SIZE  # 30 columns in CSV

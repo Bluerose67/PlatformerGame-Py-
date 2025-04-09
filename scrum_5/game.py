@@ -5,6 +5,9 @@ from entities.player import Player
 from objects.tile import Tile
 from objects.background import Background
 from objects.ui import UI
+from objects.menu import Menu
+from objects.game_over import GameOver
+from objects.game_complete import GameComplete
 from entities.enemy import Enemy
 import pygame.mixer
 
@@ -13,6 +16,10 @@ class Game:
         pygame.init()
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         self.clock = pygame.time.Clock()
+        self.state = "menu"  # menu, playing, game_over
+        self.game_complete_screen = GameComplete(self.screen)
+        self.menu = Menu(self.screen)
+        self.game_over_screen = GameOver(self.screen)
         self.load_level()
         self.offset_x = 0
         self.offset_y = 0
@@ -138,6 +145,8 @@ class Game:
             if tile.rect.colliderect(self.player.rect):
                 if tile.name == "danger":
                     self.handle_player_damage()
+                if tile.name == "goal":
+                    self.state ="complete"
                 if tile.name == "solid":
                     if self.player.x_vel > 0:
                         self.player.rect.right = tile.rect.left
@@ -207,14 +216,25 @@ class Game:
             print(f"Enemy {i} World Position: X={enemy.rect.x}, Y={enemy.rect.y}")
 
         # Debug draw (temporary)
-        for enemy in self.enemies:
-            pygame.draw.rect(self.screen, (255,0,0), 
-                pygame.Rect(
-                    enemy.rect.x - self.camera_offset[0],
-                    enemy.rect.y - self.camera_offset[1],
-                    enemy.rect.width,
-                    enemy.rect.height
-                ), 1)
+        # for enemy in self.enemies:
+        #     pygame.draw.rect(self.screen, (255,0,0), 
+        #         pygame.Rect(
+        #             enemy.rect.x - self.camera_offset[0],
+        #             enemy.rect.y - self.camera_offset[1],
+        #             enemy.rect.width,
+        #             enemy.rect.height
+        #         ), 1)
+    
+    def reset_game(self):
+        """Properly reset the game state"""
+        self.tiles.empty()
+        self.enemies.empty()
+        self.load_level()
+        self.ui = UI()
+        self.spawn_enemies()
+        self.camera_offset = [0, 0]
+        self.player = Player(704, 512, self)
+        self.state = "playing"  # Ensure we're in playing state
             
 
     def run(self):
@@ -225,19 +245,38 @@ class Game:
                 if event.type == pygame.QUIT:
                     running = False
 
-            self.handle_movement()
-            self.handle_collisions()
-            self.player.update()
-            self.enemies.update(self.tiles)
-            self.player.update_animation()
-            self.update_camera()
-            self.draw()
+            if self.state == "menu":
+                result = self.menu.handle_input()
+                if result == "Play":
+                    self.reset_game()
+                    self.state = "playing"
+                elif result == "Quit":
+                    running = False
+                self.menu.draw()
+                
+            elif self.state == "playing":
+                self.handle_movement()
+                self.handle_collisions()
+                self.player.update()
+                self.enemies.update(self.tiles)
+                self.player.update_animation()
+                self.update_camera()
+                self.draw()
+                
+                if self.ui.hearts <= 0:
+                    self.state = "game_over"
+                    
+            elif self.state == "game_over":
+                if self.game_over_screen.handle_input():
+                    self.state = "menu"
+                    self.reset_game()
+                self.game_over_screen.draw()
+            elif self.state == "complete":
+                if self.game_complete_screen.handle_input():
+                    self.state = "menu"
+                self.game_complete_screen.draw()
 
-            self.ui.draw(self.screen)
-
-            if self.ui.hearts <= 0:
-                self.game_over()
-
+            pygame.display.update()
             if self.debug_mode:
                 for enemy in self.enemies:
                     print(f"Enemy Position - World: ({enemy.rect.x}, {enemy.rect.y}) | Screen: ({enemy.rect.x - self.camera_offset[0]}, {enemy.rect.y - self.camera_offset[1]})")
@@ -245,10 +284,6 @@ class Game:
 
 
         pygame.quit()
-
-    def game_over(self):
-        # Show game over screen/restart logic
-        pass
 
 if __name__ == "__main__":
     game = Game()

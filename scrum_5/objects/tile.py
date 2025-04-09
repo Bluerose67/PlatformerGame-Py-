@@ -1,6 +1,6 @@
 import pygame
 import os
-from config import TILE_SIZE, SOLID_TILES, DANGER_TILES, SCALE_FACTOR, SCALED_TILE
+from config import TILE_SIZE, SOLID_TILES, DANGER_TILES, SCALE_FACTOR, SCALED_TILE, GOAL_TILE
 
 class Tile(pygame.sprite.Sprite):
     def __init__(self, x, y, tile_id):
@@ -11,7 +11,7 @@ class Tile(pygame.sprite.Sprite):
                                            (SCALED_TILE, SCALED_TILE))
         self.rect = self.image.get_rect(topleft=(x * SCALE_FACTOR, y * SCALE_FACTOR))
         self.mask = pygame.mask.from_surface(self.image)
-        self.name = "danger" if tile_id in DANGER_TILES else "solid" if tile_id in SOLID_TILES else "background"
+        self.name = "danger" if tile_id in DANGER_TILES else "solid" if tile_id in SOLID_TILES else "goal" if tile_id in GOAL_TILE else "background"
 
     def load_tile_image(self):
         path = os.path.join("assets", "tiles", f"{self.tile_id}.png")
