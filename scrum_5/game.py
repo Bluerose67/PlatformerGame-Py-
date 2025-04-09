@@ -59,17 +59,14 @@ class Game:
         self.update_sprite()
 
     def handle_enemy_collision(self, enemy):
-        if self.player.y_vel > 0 and self.player.rect.bottom < enemy.rect.centery:
-            # Player stomps enemy
+        # Check if player is stomping from above
+        if (self.player.rect.bottom < enemy.rect.centery and 
+            self.player.y_vel > 0):  # Falling onto enemy
             enemy.kill()
-            self.player.y_vel = -15  # Bounce
+            self.player.y_vel = -15  # Bounce effect
+            self.sounds["jump"].play()  # Play bounce sound
         else:
-            # Player takes damage
-            self.ui.take_damage()
-            # Knockback
-            knockback_dir = -1 if enemy.x_vel > 0 else 1
-            self.player.x_vel = knockback_dir * 15
-            self.player.y_vel = -10
+            self.handle_player_damage()
         
     def spawn_enemies(self):
         # Ground-level slime
@@ -84,12 +81,16 @@ class Game:
         # self.enemies.add(slime_left)
         enemy = Enemy(3528, 480, "worm")
         self.enemies.add(enemy)
+        enemy = Enemy(704, 512, "slime")
+        self.enemies.add(enemy)
+        enemy = Enemy(2744, 896, "slime")
+        self.enemies.add(enemy)
         
 
 
     def load_level(self):
         self.tiles = pygame.sprite.Group()
-        self.player = Player(3528, 500)
+        self.player = Player(704, 512)
         
         with open(os.path.join(LEVELS_DIR, "level_02.csv")) as f:
             reader = csv.reader(f)
@@ -136,7 +137,7 @@ class Game:
         for tile in self.tiles:
             if tile.rect.colliderect(self.player.rect):
                 if tile.name == "danger":
-                    print("Player damaged!")
+                    self.handle_player_damage()
                 if tile.name == "solid":
                     if self.player.x_vel > 0:
                         self.player.rect.right = tile.rect.left
@@ -154,6 +155,22 @@ class Game:
                     elif self.player.y_vel < 0:
                         self.player.rect.top = tile.rect.bottom
                     self.player.y_vel = 0
+        # Enemy collisions
+        for enemy in self.enemies:
+            if pygame.sprite.collide_mask(self.player, enemy):
+                self.handle_enemy_collision(enemy)
+
+    def handle_player_damage(self):
+        if self.player.take_damage():  # Only proceed if player wasn't invincible
+            if self.ui.take_damage():  # Only proceed if player had hearts remaining
+                self.sounds["hurt"].play()
+                # Apply knockback
+                knockback_dir = -1 if self.player.direction == "right" else 1
+                self.player.x_vel = knockback_dir * 15
+                self.player.y_vel = -10
+            else:
+                # No hearts left - game over
+                self.game_over()
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -163,20 +180,23 @@ class Game:
 
     def draw(self):
         self.screen.fill((0, 0, 0))
-        
-        # Draw background first with parallax effect
         self.background.draw(self.screen, self.camera_offset)
         
-        # Then draw game objects
+        # Draw all tiles
         for tile in self.tiles:
             tile.draw(self.screen, self.camera_offset[0], self.camera_offset[1])
         
-        self.screen.blit(self.player.image, 
-            (self.player.rect.x - self.camera_offset[0],
-             self.player.rect.y - self.camera_offset[1]))
+        # Draw player (will handle its own visibility)
+        self.player.draw(self.screen, self.camera_offset[0], self.camera_offset[1])
         
+        # Draw enemies
         for enemy in self.enemies:
             enemy.draw(self.screen, self.camera_offset[0], self.camera_offset[1])
+        
+        # Draw UI
+        self.ui.draw(self.screen)
+        
+        pygame.display.update()
         
         if self.debug_mode:
             # Player world coordinates (without camera offset)
@@ -185,10 +205,17 @@ class Game:
         # Enemy world coordinates
         for i, enemy in enumerate(self.enemies):
             print(f"Enemy {i} World Position: X={enemy.rect.x}, Y={enemy.rect.y}")
-            
-        self.ui.draw(self.screen)
 
-        pygame.display.update()
+        # Debug draw (temporary)
+        for enemy in self.enemies:
+            pygame.draw.rect(self.screen, (255,0,0), 
+                pygame.Rect(
+                    enemy.rect.x - self.camera_offset[0],
+                    enemy.rect.y - self.camera_offset[1],
+                    enemy.rect.width,
+                    enemy.rect.height
+                ), 1)
+            
 
     def run(self):
         running = True
@@ -215,11 +242,7 @@ class Game:
                 for enemy in self.enemies:
                     print(f"Enemy Position - World: ({enemy.rect.x}, {enemy.rect.y}) | Screen: ({enemy.rect.x - self.camera_offset[0]}, {enemy.rect.y - self.camera_offset[1]})")
 
-            # Camera follow
-            if self.player.rect.right - self.offset_x > WIDTH - 300:
-                self.offset_x = self.player.rect.right - (WIDTH - 300)
-            if self.player.rect.left - self.offset_x < 300:
-                self.offset_x = self.player.rect.left - 300
+
 
         pygame.quit()
 
@@ -230,9 +253,3 @@ class Game:
 if __name__ == "__main__":
     game = Game()
     game.run()
-
-
-    #Let us handle the menu screen. Right now we don't have a menu screen so let us make a menu screen which includes play, 
-    # quit for now and is display at the beginning. The game actually starts from this screen and when the user navigates 
-    # with arrow keys and selects play, the game starts and if the user selects quit the game window closes. Similarly, 
-    # the game over logic is just redirecting the player or user to the menu screen.

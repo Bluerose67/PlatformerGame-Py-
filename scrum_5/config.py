@@ -11,6 +11,7 @@ SCALE_FACTOR = 0.5  # Adjust this to control zoom (0.5 = 50% size)
 SCALED_TILE = int(TILE_SIZE * SCALE_FACTOR)
 BG_SCALE_FACTOR = 0.7  # Adjust this to control background zoom
 
+
 PLAYER_HEALTH = 3
 ENEMY_SPEED = 2
 SOUND_VOLUME = 0.5
@@ -25,7 +26,7 @@ LEVELS_DIR = os.path.join("levels")
 
 # Tile Properties
 SOLID_TILES = {0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 16}
-DANGER_TILES = {}
+DANGER_TILES = {7}
 
 # Calculate level dimensions based on CSV
 LEVEL_WIDTH = 30 * TILE_SIZE  # 30 columns in CSV

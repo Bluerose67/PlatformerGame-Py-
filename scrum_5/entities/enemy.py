@@ -7,10 +7,13 @@ class Enemy(pygame.sprite.Sprite):
         super().__init__()
         self.enemy_type = enemy_type
         self.assets = self.load_assets()
-        self.rect = pygame.Rect(x, y, TILE_SIZE//2, TILE_SIZE//2)  # Smaller hitbox
+        self.rect = self.assets["idle"].get_rect(topleft=(x, y))
+        self.mask = pygame.mask.from_surface(self.assets["idle"])
+
         self.x_vel = 0
         self.y_vel = 0
         self.direction = 1  # 1=right, -1=left
+        self.speed = 2
         self.animation_delay = 10  # Higher = slower animation (player uses 3)
         self.animation_count = 0
         self.current_frame = 0
@@ -62,45 +65,23 @@ class Enemy(pygame.sprite.Sprite):
         
         return assets
 
-    def patrol(self, tiles):
-        if self.grounded:
-            self.stable_frames += 1
-            # Only move after being stable for a few frames
-            if self.stable_frames > 5:
-                self.x_vel = ENEMY_SPEED * self.direction
-                
-                # Edge detection
-                edge_check = pygame.Rect(
-                    self.rect.x + (self.direction * 20),
-                    self.rect.bottom + 1,
-                    10, 2
-                )
-                
-                has_ground = False
-                for tile in tiles:
-                    if edge_check.colliderect(tile.rect):
-                        has_ground = True
-                        break
-                
-                if not has_ground:
-                    self.direction *= -1
-                    self.x_vel = ENEMY_SPEED * self.direction
-        else:
-            self.x_vel = 0  # Stop horizontal movement in air
+    def patrol(self):
+        # Move in current direction
+        self.x_vel = self.speed * self.direction
+        
+        # Reverse direction if reached patrol boundary
+        if abs(self.rect.x - self.start_x) >= self.patrol_distance:
+            self.direction *= -1
+            self.start_x = self.rect.x
 
     def apply_gravity(self):
+        """Apply gravity with proper ground detection"""
         if not self.grounded:
             self.y_vel += self.gravity
         else:
-            self.y_vel = 0  # Reset gravity when grounded
-
-    def apply_gravity(self):
-        if not self.grounded:
-            self.y_vel += self.gravity
-        else:
-            self.y_vel = 0  # Reset when grounded
-            # Ensure we stay snapped to ground
-            self.rect.y = int(self.rect.y)
+            # When grounded, snap to position and reset velocity
+            self.y_vel = min(0, self.y_vel)  # Prevent sinking
+            self.rect.y = int(self.rect.y)  # Ensure pixel-perfect alignment
 
     def update_sprite(self):
         # Slow animation by only updating every N frames
@@ -117,59 +98,42 @@ class Enemy(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
 
     def update(self, tiles):
-        self.patrol(tiles)
+        self.patrol()
         
-        # Apply gravity only if not grounded
-        if not self.grounded:
-            self.y_vel += self.gravity
-        else:
-            self.y_vel = 0
-            # Snap to ground position
-            self.rect.bottom = self.last_grounded_y
+        self.apply_gravity()
         
         # Apply movement
-        self.handle_collisions(tiles, self.x_vel, self.y_vel)
+        self.handle_collisions(tiles)
         
         self.update_sprite()
 
-    def handle_collisions(self, tiles, dx, dy):
-        self.grounded = False
-        
-        # Check horizontal collisions first if moving
-        if dx != 0:
-            self.rect.x += dx
-            for tile in tiles:
-                if pygame.sprite.collide_rect(self, tile):
-                    if dx > 0:
+    def handle_collisions(self, tiles):
+        # Horizontal collisions
+        self.rect.x += self.x_vel
+        for tile in tiles:
+            if pygame.sprite.collide_mask(self, tile):
+                if hasattr(tile, 'name') and tile.name == "solid":
+                    if self.x_vel > 0:
                         self.rect.right = tile.rect.left
-                    else:
+                        self.direction = -1
+                    elif self.x_vel < 0:
                         self.rect.left = tile.rect.right
-                    self.direction *= -1  # Reverse direction on collision
-                    self.x_vel = ENEMY_SPEED * self.direction
-            self.rect.x = int(self.rect.x)  # Snap to integer position
+                        self.direction = 1
+                    self.start_x = self.rect.x
+                elif hasattr(tile, 'name') and tile.name == "danger":
+                    print("Enemy damaged!")
 
-        # Then check vertical collisions
-        if dy != 0:
-            self.rect.y += dy
-            for tile in tiles:
-                if pygame.sprite.collide_rect(self, tile):
-                    if dy > 0:  # Landing
+        # Vertical collisions
+        self.rect.y += self.y_vel
+        for tile in tiles:
+            if pygame.sprite.collide_mask(self, tile):
+                if hasattr(tile, 'name') and tile.name == "solid":
+                    if self.y_vel > 0:
                         self.rect.bottom = tile.rect.top
-                        self.last_grounded_y = self.rect.bottom
-                        self.grounded = True
-                        self.stable_frames = 0
-                    elif dy < 0:  # Hitting ceiling
+                        self.y_vel = 0
+                    elif self.y_vel < 0:
                         self.rect.top = tile.rect.bottom
-                    self.y_vel = 0
-            self.rect.y = int(self.rect.y)  # Snap to integer position
+                        self.y_vel = 0
 
     def draw(self, surface, offset_x, offset_y):
         surface.blit(self.image, (self.rect.x - offset_x, self.rect.y - offset_y))
-         # Draw hitbox border (RED)
-        hitbox_rect = pygame.Rect(
-            self.rect.x - offset_x,
-            self.rect.y - offset_y,
-            self.rect.width,
-            self.rect.height
-        )
-        pygame.draw.rect(surface, (255, 0, 0), hitbox_rect, 1)  # 1px red border
